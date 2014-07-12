@@ -1,6 +1,12 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
+import itertools
 import logging
+
+import requests
+from .packages import six
+import yaml
+
 from .service import Service
 from .container import Container
 from .packages.docker.errors import APIError
@@ -39,37 +45,85 @@ def sort_service_dicts(services):
     return sorted_services
 
 
+# TODO: test case for different types
+def fetch_external_config(fetch_request):
+    log.info("Fetching config from %s" % (fetch_request,))
+
+    def read_config(content):
+        return six.iteritems(yaml.safe_load(content))
+
+    if 'url' in fetch_request:
+        # TODO: error handling of failed requersts
+        # TODO: parse username, or does requests handle that?
+        return read_config(requests.get(fetch_request['url']).text)
+
+    if 'path' in fetch_request:
+        # TODO: error handling
+        with open(fetch_request['path'], 'r') as fh:
+            return read_config(fh.read())
+
+    # TODO: git?
+    # TODO: raise config error as fallback
+
+
+def get_external_projects(config, client):
+    """Recursively fetch included projects.
+    """
+
+    def get_projects(includes):
+        for name, fetch_request in six.iteritems(includes):
+            config = fetch_external_config(fetch_request)
+            for linked_project in get_external_projects(config, client):
+                yield linked_project
+            # TODO: verify each service is available as an image
+            yield Project.from_config(name, config, client)
+
+    # TODO: verify project uniqueness by name
+    return list(get_projects(config.pop('include', {})))
+
+
 class Project(object):
     """
     A collection of services.
     """
-    def __init__(self, name, services, client):
+    def __init__(self, name, services, client, external_projects=None):
         self.name = name
         self.services = services
         self.client = client
+        self.external_projects = external_projects or []
 
     @classmethod
-    def from_dicts(cls, name, service_dicts, client):
+    def from_dicts(cls, name, service_dicts, client, external_projects):
         """
         Construct a ServiceCollection from a list of dicts representing services.
         """
-        project = cls(name, [], client)
+        project = cls(name, [], client, external_projects)
         for service_dict in sort_service_dicts(service_dicts):
-            links = project.get_links(service_dict)
+            links = project.get_links(service_dict.pop('links', None),
+                                      service_dict['name'])
             volumes_from = project.get_volumes_from(service_dict)
 
-            project.services.append(Service(client=client, project=name, links=links, volumes_from=volumes_from, **service_dict))
+            project.services.append(
+                Service(client=client,
+                        project=name,
+                        links=links,
+                        volumes_from=volumes_from,
+                        **service_dict))
         return project
 
     @classmethod
     def from_config(cls, name, config, client):
         dicts = []
-        for service_name, service in list(config.items()):
+        external_projects = get_external_projects(config, client)
+        for service_name, service in config.items():
             if not isinstance(service, dict):
-                raise ConfigurationError('Service "%s" doesn\'t have any configuration options. All top level keys in your fig.yml must map to a dictionary of configuration options.')
+                raise ConfigurationError(
+                    'Service "%s" doesn\'t have any configuration options. All '
+                    'top level keys in your fig.yml must map to a dictionary '
+                    'of configuration options.')
             service['name'] = service_name
             dicts.append(service)
-        return cls.from_dicts(name, dicts, client)
+        return cls.from_dicts(name, dicts, client, external_projects)
 
     def get_service(self, name):
         """
@@ -80,7 +134,19 @@ class Project(object):
             if service.name == name:
                 return service
 
+        # TODO: test case
+        if '_' in name:
+            project_name, name = name.rsplit('_', 1)
+            for project in self.external_projects:
+                if project.name == project_name:
+                    return project.get_service(name)
+
         raise NoSuchService(name)
+
+    @property
+    def all_services(self):
+        return self.services + list(itertools.chain.from_iterable(
+            project.services for project in self.external_projects))
 
     def get_services(self, service_names=None, include_links=False):
         """
@@ -96,36 +162,34 @@ class Project(object):
 
         Raises NoSuchService if any of the named services do not exist.
         """
-        if service_names is None or len(service_names) == 0:
-            return self.get_services(
-                service_names=[s.name for s in self.services],
-                include_links=include_links
-            )
+        if service_names:
+            services = [self.get_service(name) for name in service_names]
         else:
-            unsorted = [self.get_service(name) for name in service_names]
-            services = [s for s in self.services if s in unsorted]
+            services = self.all_services
 
-            if include_links:
-                services = reduce(self._inject_links, services, [])
+        if include_links:
+            services = reduce(self._inject_links, services, [])
 
-            uniques = []
-            [uniques.append(s) for s in services if s not in uniques]
-            return uniques
+        # TODO: use orderedset/ordereddict
+        uniques = []
+        [uniques.append(s) for s in services if s not in uniques]
+        return uniques
 
-    def get_links(self, service_dict):
-        links = []
-        if 'links' in service_dict:
-            for link in service_dict.get('links', []):
-                if ':' in link:
-                    service_name, link_name = link.split(':', 1)
-                else:
-                    service_name, link_name = link, None
-                try:
-                    links.append((self.get_service(service_name), link_name))
-                except NoSuchService:
-                    raise ConfigurationError('Service "%s" has a link to service "%s" which does not exist.' % (service_dict['name'], service_name))
-            del service_dict['links']
-        return links
+    def get_links(self, config_links, name):
+        def get_linked_service(link):
+            if ':' in link:
+                service_name, link_name = link.split(':', 1)
+            else:
+                service_name, link_name = link, None
+
+            try:
+                return self.get_service(service_name), link_name
+            except NoSuchService:
+                raise ConfigurationError(
+                    'Service "%s" has a link to service "%s" which does not '
+                    'exist.' % (name, service_name))
+
+        return map(get_linked_service, config_links or [])
 
     def get_volumes_from(self, service_dict):
         volumes_from = []
@@ -188,17 +252,14 @@ class Project(object):
 
     def _inject_links(self, acc, service):
         linked_names = service.get_linked_names()
+        if not linked_names:
+            return acc + [service]
 
-        if len(linked_names) > 0:
-            linked_services = self.get_services(
-                service_names=linked_names,
-                include_links=True
-            )
-        else:
-            linked_services = []
-
-        linked_services.append(service)
-        return acc + linked_services
+        linked_services = self.get_services(
+            service_names=linked_names,
+            include_links=True
+        )
+        return acc + linked_services + [service]
 
 
 class NoSuchService(Exception):

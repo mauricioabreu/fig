@@ -1,0 +1,18 @@
+include:
+  serviceb:
+    path: ./serviceb/fig.yml
+
+  servicec:
+    path: ./servicec/fig.yml
+
+db:
+  image: busybox:latest
+  command: /bin/sleep 300
+
+webapp:
+  image: busybox:latest
+  command: /bin/sleep 300
+  links:
+    - db
+    - serviceb_webaapp
+    - servicec_webapp

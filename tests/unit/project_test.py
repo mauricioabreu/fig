@@ -3,6 +3,7 @@ from .. import unittest
 from fig.service import Service
 from fig.project import Project, ConfigurationError
 
+
 class ProjectTest(unittest.TestCase):
     def test_from_dict(self):
         project = Project.from_dicts('figtest', [
@@ -14,7 +15,7 @@ class ProjectTest(unittest.TestCase):
                 'name': 'db',
                 'image': 'busybox:latest'
             },
-        ], None)
+        ], None, None)
         self.assertEqual(len(project.services), 2)
         self.assertEqual(project.get_service('web').name, 'web')
         self.assertEqual(project.get_service('web').options['image'], 'busybox:latest')
@@ -38,7 +39,7 @@ class ProjectTest(unittest.TestCase):
                 'image': 'busybox:latest',
                 'volumes': ['/tmp'],
             }
-        ], None)
+        ], None, None)
 
         self.assertEqual(project.services[0].name, 'volume')
         self.assertEqual(project.services[1].name, 'db')
@@ -72,20 +73,17 @@ class ProjectTest(unittest.TestCase):
             client=None,
             image="busybox:latest",
         )
-        project = Project('test', [web], None)
+        project = Project('test', [web], None, None)
         self.assertEqual(project.get_service('web'), web)
 
     def test_get_services_returns_all_services_without_args(self):
-        web = Service(
-            project='figtest',
-            name='web',
-        )
-        console = Service(
-            project='figtest',
-            name='console',
-        )
-        project = Project('test', [web, console], None)
-        self.assertEqual(project.get_services(), [web, console])
+        web = Service(project='figtest', name='web')
+        console = Service(project='figtest', name='console')
+        external_web = Service(project='servicea', name='web')
+
+        external_projects = [Project('servicea',[external_web], None, None)]
+        project = Project('test', [web, console], None, external_projects)
+        self.assertEqual(project.get_services(), [web, console, external_web])
 
     def test_get_services_returns_listed_services_with_args(self):
         web = Service(
@@ -139,3 +137,25 @@ class ProjectTest(unittest.TestCase):
             project.get_services(['web', 'db'], include_links=True),
             [db, web]
         )
+
+    def test_get_links(self):
+        db = Service(project='test', name='db')
+        other = Service(project='test', name='other')
+        project = Project('test', [db, other], None)
+        config_links = [
+            'db',
+            'db:alias',
+            'other',
+        ]
+        links = project.get_links(config_links, 'test')
+        expected = [
+            (db, None),
+            (db, 'alias'),
+            (other, None),
+        ]
+        self.assertEqual(links, expected)
+
+    def test_get_links_no_links(self):
+        project = Project('test', [], None)
+        self.assertEqual(project.get_links(None, None), [])
+

@@ -1,9 +1,14 @@
 from __future__ import absolute_import
-from .testcases import DockerClientTestCase
+import contextlib
+import os
+import sys
+
 from mock import patch
+
+from .testcases import DockerClientTestCase
 from fig.cli.main import TopLevelCommand
 from fig.packages.six import StringIO
-import sys
+
 
 class CLITestCase(DockerClientTestCase):
     def setUp(self):
@@ -89,6 +94,13 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(len(db.containers()), 0)
         self.assertEqual(len(console.containers()), 0)
 
+    def test_up_with_includes(self):
+        with use_dir('tests/fixtures/external-includes-figfile'):
+            self.command.dispatch(['up', '-d', 'webapp'], None)
+        
+            webapp = self.command.project.get_service('webapp')
+            print "next"
+
     def test_up_with_recreate(self):
         self.command.dispatch(['up', '-d'], None)
         service = self.command.project.get_service('simple')
@@ -116,7 +128,6 @@ class CLITestCase(DockerClientTestCase):
         new_ids = [c.id for c in service.containers()]
 
         self.assertEqual(old_ids, new_ids)
-
 
     @patch('dockerpty.start')
     def test_run_service_without_links(self, mock_stdout):
@@ -210,3 +221,12 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(len(project.get_service('simple').containers()), 0)
         self.assertEqual(len(project.get_service('another').containers()), 0)
 
+
+@contextlib.contextmanager
+def use_dir(dir_name):
+    old_dir = os.getcwd()
+    os.chdir(dir_name)
+    try:
+        yield
+    finally:
+        os.chdir(old_dir)
