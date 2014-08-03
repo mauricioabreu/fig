@@ -1,6 +1,6 @@
 include:
   servicec:
-    path: ./servicec/fig.yml
+    path: ./tests/fixtures/external-includes-figfile/servicec/fig.yml
 
 db:
   image: busybox:latest

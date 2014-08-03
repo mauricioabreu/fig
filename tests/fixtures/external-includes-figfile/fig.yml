@@ -1,9 +1,9 @@
 include:
   serviceb:
-    path: ./serviceb/fig.yml
+    path: ./tests/fixtures/external-includes-figfile/serviceb/fig.yml
 
   servicec:
-    path: ./servicec/fig.yml
+    path: ./tests/fixtures/external-includes-figfile/servicec/fig.yml
 
 db:
   image: busybox:latest
@@ -14,5 +14,5 @@ webapp:
   command: /bin/sleep 300
   links:
     - db
-    - serviceb_webaapp
+    - serviceb_webapp
     - servicec_webapp

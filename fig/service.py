@@ -264,7 +264,12 @@ class Service(object):
             return [self.start_container_if_stopped(c) for c in containers]
 
     def get_linked_names(self):
-        return [s.name for (s, _) in self.links]
+        # TODO: make this a properly on service
+        return ["%s_%s" % (s.project, s.name) for (s, _) in self.links]
+
+    # TODO: namedtuple for links
+    def get_linked_services(self):
+        return [s for (s, _) in self.links]
 
     def next_container_name(self, one_off=False):
         bits = [self.project, self.name]

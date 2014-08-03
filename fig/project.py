@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
 import itertools
+from itertools import chain
 import logging
 
 import requests
@@ -50,7 +51,7 @@ def fetch_external_config(fetch_request):
     log.info("Fetching config from %s" % (fetch_request,))
 
     def read_config(content):
-        return six.iteritems(yaml.safe_load(content))
+        return yaml.safe_load(content)
 
     if 'url' in fetch_request:
         # TODO: error handling of failed requersts
@@ -66,20 +67,21 @@ def fetch_external_config(fetch_request):
     # TODO: raise config error as fallback
 
 
-def get_external_projects(config, client):
+# TODO: this should be a unique set by project location
+def get_external_projects(name, config, client):
     """Recursively fetch included projects.
     """
 
-    def get_projects(includes):
-        for name, fetch_request in six.iteritems(includes):
-            config = fetch_external_config(fetch_request)
-            for linked_project in get_external_projects(config, client):
-                yield linked_project
-            # TODO: verify each service is available as an image
-            yield Project.from_config(name, config, client)
+    def get_project(name, fetch_request):
+        config = fetch_external_config(fetch_request)
+        # TODO: verify each service is available as an image
+        return Project.from_config(name, config, client)
 
-    # TODO: verify project uniqueness by name
-    return list(get_projects(config.pop('include', {})))
+    # TODO: verify project uniqueness by name instead of having
+    # duplicate projects
+    includes = config.pop('include', {})
+    return [get_project(name, fetch_request)
+            for name, fetch_request in six.iteritems(includes)]
 
 
 class Project(object):
@@ -114,7 +116,8 @@ class Project(object):
     @classmethod
     def from_config(cls, name, config, client):
         dicts = []
-        external_projects = get_external_projects(config, client)
+        external_projects = get_external_projects(name, config, client)
+        print "%s has externals %s" % (name, external_projects)
         for service_name, service in config.items():
             if not isinstance(service, dict):
                 raise ConfigurationError(
@@ -134,6 +137,7 @@ class Project(object):
             if service.name == name:
                 return service
 
+        # TODO: move into external_projects module
         # TODO: test case
         if '_' in name:
             project_name, name = name.rsplit('_', 1)
@@ -162,13 +166,23 @@ class Project(object):
 
         Raises NoSuchService if any of the named services do not exist.
         """
+
+        def _inject_links(acc, service):
+            # TODO: why get names when these are already references?
+            linked_services = service.get_linked_services()
+            if not linked_services:
+                return acc + [service]
+   
+            # TODO: work here, return links of externals?
+            return acc + linked_services + [service]
+
         if service_names:
             services = [self.get_service(name) for name in service_names]
         else:
             services = self.all_services
 
         if include_links:
-            services = reduce(self._inject_links, services, [])
+            services = reduce(_inject_links, services, [])
 
         # TODO: use orderedset/ordereddict
         uniques = []
@@ -249,16 +263,11 @@ class Project(object):
                 for service in self.get_services(service_names)
                 if service.has_container(container, one_off=one_off)]
 
-    def _inject_links(self, acc, service):
-        linked_names = service.get_linked_names()
-        if not linked_names:
-            return acc + [service]
-
-        linked_services = self.get_services(
-            service_names=linked_names,
-            include_links=True
-        )
-        return acc + linked_services + [service]
+    def __repr__(self):
+        return "Project(%s, services=%s, includes=%s)" % (
+            self.name,
+            len(self.services),
+            len(self.external_projects))
 
 
 class NoSuchService(Exception):
