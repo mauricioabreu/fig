@@ -7,7 +7,7 @@ title: Fig | Fast, isolated development environments using Docker
 
 Define your app's environment with Docker so it can be reproduced anywhere:
 
-    FROM orchardup/python:2.7
+    FROM python:2.7
     ADD . /code
     WORKDIR /code
     RUN pip install -r requirements.txt
@@ -23,7 +23,7 @@ web:
   ports:
    - "8000:8000"
 db:
-  image: orchardup/postgresql
+  image: postgres
 ```
 
 (No more installing Postgres on your laptop!)
@@ -59,10 +59,7 @@ from flask import Flask
 from redis import Redis
 import os
 app = Flask(__name__)
-redis = Redis(
-    host=os.environ.get('REDIS_1_PORT_6379_TCP_ADDR'),
-    port=int(os.environ.get('REDIS_1_PORT_6379_TCP_PORT'))
-)
+redis = Redis(host="redis_1", port=6379)
 
 @app.route('/')
 def hello():
@@ -80,7 +77,7 @@ We define our Python dependencies in a file called `requirements.txt`:
 
 Next, we want to create a Docker image containing all of our app's dependencies. We specify how to build one using a file called `Dockerfile`:
 
-    FROM orchardup/python:2.7
+    FROM python:2.7
     ADD . /code
     WORKDIR /code
     RUN pip install -r requirements.txt
@@ -99,17 +96,17 @@ We then define a set of services using `fig.yml`:
       links:
        - redis
     redis:
-      image: orchardup/redis
+      image: redis
 
 This defines two services:
 
  - `web`, which is built from `Dockerfile` in the current directory. It also says to run the command `python app.py` inside the image, forward the exposed port 5000 on the container to port 5000 on the host machine, connect up the Redis service, and mount the current directory inside the container so we can work on code without having to rebuild the image.
- - `redis`, which uses the public image [orchardup/redis](https://index.docker.io/u/orchardup/redis/). 
+ - `redis`, which uses the public image [redis](https://registry.hub.docker.com/_/redis/). 
 
 Now if we run `fig up`, it'll pull a Redis image, build an image for our own code, and start everything up:
 
     $ fig up
-    Pulling image orchardup/redis...
+    Pulling image redis...
     Building web...
     Starting figtest_redis_1...
     Starting figtest_web_1...
@@ -140,4 +137,4 @@ If you started Fig with `fig up -d`, you'll probably want to stop your services 
 
     $ fig stop
 
-That's more-or-less how Fig works. See the reference section below for full details on the commands, configuration file and environment variables. If you have any thoughts or suggestions, [open an issue on GitHub](https://github.com/orchardup/fig) or [email us](mailto:hello@orchardup.com).
+That's more-or-less how Fig works. See the reference section below for full details on the commands, configuration file and environment variables. If you have any thoughts or suggestions, [open an issue on GitHub](https://github.com/docker/fig).

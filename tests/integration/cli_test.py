@@ -11,6 +11,7 @@ from fig.packages.six import StringIO
 
 
 
+
 class CLITestCase(DockerClientTestCase):
     def setUp(self):
         super(CLITestCase, self).setUp()

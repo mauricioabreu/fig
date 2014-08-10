@@ -1,14 +1,14 @@
 Fig
 ===
 
-[![Build Status](https://travis-ci.org/orchardup/fig.svg?branch=master)](https://travis-ci.org/orchardup/fig)
+[![Build Status](https://travis-ci.org/docker/fig.svg?branch=master)](https://travis-ci.org/docker/fig)
 [![PyPI version](https://badge.fury.io/py/fig.png)](http://badge.fury.io/py/fig)
 
 Fast, isolated development environments using Docker.
 
 Define your app's environment with Docker so it can be reproduced anywhere:
 
-    FROM orchardup/python:2.7
+    FROM python:2.7
     ADD . /code
     WORKDIR /code
     RUN pip install -r requirements.txt
@@ -25,7 +25,7 @@ web:
    - "8000:8000"
    - "49100:22"
 db:
-  image: orchardup/postgresql
+  image: postgres
 ```
 
 (No more installing Postgres on your laptop!)
@@ -40,8 +40,6 @@ There are commands to:
  - view the status of running services
  - tail running services' log output
  - run a one-off command on a service
-
-Fig is a project from [Orchard](https://orchardup.com), a Docker hosting service. [Follow us on Twitter](https://twitter.com/orchardup) to keep up to date with Fig and other Docker news.
 
 Installation and documentation
 ------------------------------

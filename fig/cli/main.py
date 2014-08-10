@@ -137,11 +137,16 @@ class TopLevelCommand(Command):
         """
         View output from containers.
 
-        Usage: logs [SERVICE...]
+        Usage: logs [options] [SERVICE...]
+
+        Options:
+            --no-color  Produce monochrome output.
         """
         containers = project.containers(service_names=options['SERVICE'], stopped=True)
+
+        monochrome = options['--no-color']
         print("Attaching to", list_containers(containers))
-        LogPrinter(containers, attach_params={'logs': True}).run()
+        LogPrinter(containers, attach_params={'logs': True}, monochrome=monochrome).run()
 
     def ps(self, project, options):
         """
@@ -329,10 +334,13 @@ class TopLevelCommand(Command):
         Options:
             -d             Detached mode: Run containers in the background,
                            print new container names.
+            --no-color     Produce monochrome output.
             --no-deps      Don't start linked services.
             --no-recreate  If containers already exist, don't recreate them.
         """
         detached = options['-d']
+
+        monochrome = options['--no-color']
 
         start_links = not options['--no-deps']
         recreate = not options['--no-recreate']
@@ -348,7 +356,7 @@ class TopLevelCommand(Command):
 
         if not detached:
             print("Attaching to", list_containers(to_attach))
-            log_printer = LogPrinter(to_attach, attach_params={"logs": True})
+            log_printer = LogPrinter(to_attach, attach_params={"logs": True}, monochrome=monochrome)
 
             try:
                 log_printer.run()

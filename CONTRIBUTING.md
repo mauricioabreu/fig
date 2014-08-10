@@ -6,7 +6,7 @@ If you're looking to contribute to [Fig](http://www.fig.sh/)
 but you're new to the project or maybe even to Python, here are the steps
 that should get you started.
 
-1. Fork [https://github.com/orchardup/fig](https://github.com/orchardup/fig)
+1. Fork [https://github.com/docker/fig](https://github.com/docker/fig)
    to your username. kvz in this example.
 1. Clone your forked repository locally `git clone git@github.com:kvz/fig.git`.
 1. Enter the local directory `cd fig`.
@@ -95,3 +95,8 @@ The easiest way to do this is to use the `--signoff` flag when committing. E.g.:
 5. Publish GitHub release, creating tag
 
 6. Update website with `script/deploy-docs`
+
+7. Upload PyPi package
+
+    $ git checkout $VERSION
+    $ python setup.py sdist upload
