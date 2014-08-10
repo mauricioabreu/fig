@@ -64,6 +64,10 @@ class Service(object):
         self.volumes_from = volumes_from or []
         self.options = options
 
+    @property
+    def full_name(self):
+        return '%s_%s' % (self.project, self.name)
+
     def containers(self, stopped=False, one_off=False):
         return [Container.from_ps(self.client, container)
                 for container in self.client.containers(all=stopped)
@@ -264,8 +268,7 @@ class Service(object):
             return [self.start_container_if_stopped(c) for c in containers]
 
     def get_linked_names(self):
-        # TODO: make this a properly on service
-        return ["%s_%s" % (s.project, s.name) for (s, _) in self.links]
+        return [s.full_name for (s, _) in self.links]
 
     # TODO: namedtuple for links
     def get_linked_services(self):
@@ -405,6 +408,11 @@ class Service(object):
             if ':' in str(port):
                 return False
         return True
+
+    def __repr__(self):
+        return "Service(%s, project='%s', links=%r)" % (self.name,
+                                                        self.project,
+                                                        self.get_linked_names())
 
 
 NAME_RE = re.compile(r'^([^_]+)_([^_]+)_(run_)?(\d+)$')

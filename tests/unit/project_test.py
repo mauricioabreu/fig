@@ -117,10 +117,8 @@ class ProjectTest(unittest.TestCase):
             links=[(web, 'web')]
         )
         project = Project('test', [web, db, cache, console], None)
-        self.assertEqual(
-            project.get_services(['console'], include_links=True),
-            [db, web, console]
-        )
+        services = project.get_services(['console'], include_links=True)
+        self.assertEqual(services, [db, web, console])
 
     def test_get_services_removes_duplicates_following_links(self):
         db = Service(

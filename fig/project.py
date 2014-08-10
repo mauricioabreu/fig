@@ -1,8 +1,8 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
-import itertools
 from itertools import chain
 import logging
+from operator import attrgetter
 
 import requests
 from .packages import six
@@ -80,8 +80,8 @@ def get_external_projects(name, config, client):
     # TODO: verify project uniqueness by name instead of having
     # duplicate projects
     includes = config.pop('include', {})
-    return [get_project(name, fetch_request)
-            for name, fetch_request in six.iteritems(includes)]
+    return [get_project(external_name, fetch_request)
+            for external_name, fetch_request in six.iteritems(includes)]
 
 
 class Project(object):
@@ -149,8 +149,8 @@ class Project(object):
 
     @property
     def all_services(self):
-        return self.services + list(itertools.chain.from_iterable(
-            project.services for project in self.external_projects))
+        return self.services + flat_map(attrgetter('services'),
+                                        self.external_projects)
 
     def get_services(self, service_names=None, include_links=False):
         """
@@ -167,14 +167,13 @@ class Project(object):
         Raises NoSuchService if any of the named services do not exist.
         """
 
-        def _inject_links(acc, service):
+        def _add_linked_services(service):
             # TODO: why get names when these are already references?
             linked_services = service.get_linked_services()
             if not linked_services:
-                return acc + [service]
-   
-            # TODO: work here, return links of externals?
-            return acc + linked_services + [service]
+                return [service]
+
+            return flat_map(_add_linked_services, linked_services) + [service]
 
         if service_names:
             services = [self.get_service(name) for name in service_names]
@@ -182,7 +181,7 @@ class Project(object):
             services = self.all_services
 
         if include_links:
-            services = reduce(_inject_links, services, [])
+            services = flat_map(_add_linked_services, services)
 
         # TODO: use orderedset/ordereddict
         uniques = []
@@ -268,6 +267,10 @@ class Project(object):
             self.name,
             len(self.services),
             len(self.external_projects))
+
+
+def flat_map(func, seq):
+    return list(chain.from_iterable(map(func, seq)))
 
 
 class NoSuchService(Exception):
