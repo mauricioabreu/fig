@@ -4,11 +4,10 @@ from itertools import chain
 import logging
 from operator import attrgetter
 
-import requests
 from fig.packages import six
 from fig.packages.docker.errors import APIError
-import yaml
 
+from fig import includes
 from fig.service import Service
 from fig.service import ServiceLink
 from fig.container import Container
@@ -47,42 +46,21 @@ def sort_service_dicts(services):
     return sorted_services
 
 
-# TODO: test case for different types
-def fetch_external_config(fetch_request):
-    log.info("Fetching config from %s" % (fetch_request,))
-
-    def read_config(content):
-        return yaml.safe_load(content)
-
-    if 'url' in fetch_request:
-        # TODO: error handling of failed requersts
-        # TODO: parse username, or does requests handle that?
-        return read_config(requests.get(fetch_request['url']).text)
-
-    if 'path' in fetch_request:
-        # TODO: error handling
-        with open(fetch_request['path'], 'r') as fh:
-            return read_config(fh.read())
-
-    # TODO: git?
-    # TODO: raise config error as fallback
-
-
 # TODO: this should be a unique set by project location
 def get_external_projects(name, config, client):
     """Recursively fetch included projects.
     """
 
     def get_project(name, fetch_request):
-        config = fetch_external_config(fetch_request)
+        config = includes.fetch_external_config(fetch_request)
         # TODO: verify each service is available as an image
         return Project.from_config(name, config, client)
 
     # TODO: verify project uniqueness by name instead of having
     # duplicate projects
-    includes = config.pop('include', {})
+    conf_includes = config.pop('include', {})
     return [get_project(external_name, fetch_request)
-            for external_name, fetch_request in six.iteritems(includes)]
+            for external_name, fetch_request in six.iteritems(conf_includes)]
 
 
 class Project(object):
@@ -133,6 +111,7 @@ class Project(object):
         Retrieve a service by name. Raises NoSuchService
         if the named service does not exist.
         """
+        # TODO: make this nicer
         if '_' in name:
             project_name, name = name.rsplit('_', 1)
         else:
@@ -143,7 +122,6 @@ class Project(object):
                 if service.name == name:
                     return service
 
-        # TODO: move into external_projects module
         # TODO: test case
         for project in self.external_projects:
             if project.name == project_name:
@@ -172,7 +150,6 @@ class Project(object):
         """
 
         def _add_linked_services(service):
-            # TODO: why get names when these are already references?
             linked_services = service.get_linked_services()
             if not linked_services:
                 return [service]
