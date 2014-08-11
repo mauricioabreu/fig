@@ -10,8 +10,6 @@ from fig.cli.main import TopLevelCommand
 from fig.packages.six import StringIO
 
 
-
-
 class CLITestCase(DockerClientTestCase):
     def setUp(self):
         super(CLITestCase, self).setUp()
@@ -101,11 +99,18 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(len(console.containers()), 0)
 
     def test_up_with_includes(self):
-        with use_dir('tests/fixtures/external-includes-figfile'):
-            self.command.dispatch(['up', '-d', 'webapp'], None)
+        self.command.base_dir = 'tests/fixtures/external-includes-figfile'
+        self.command.dispatch(['up', '-d', 'webapp'], None)
         
-            webapp = self.command.project.get_service('webapp')
-            print "next"
+        webapp = self.project.get_service('webapp')
+        expected = [
+            'externalincludesfigfile_db',
+            'serviceb_webapp',
+            'servicec_webapp'
+        ]
+        self.assertEqual(
+            [link.service.full_name for link in webapp.links],
+            expected)
 
     def test_up_with_recreate(self):
         self.command.dispatch(['up', '-d'], None)
@@ -226,13 +231,3 @@ class CLITestCase(DockerClientTestCase):
         self.command.scale(project, {'SERVICE=NUM': ['simple=0', 'another=0']})
         self.assertEqual(len(project.get_service('simple').containers()), 0)
         self.assertEqual(len(project.get_service('another').containers()), 0)
-
-
-@contextlib.contextmanager
-def use_dir(dir_name):
-    old_dir = os.getcwd()
-    os.chdir(dir_name)
-    try:
-        yield
-    finally:
-        os.chdir(old_dir)

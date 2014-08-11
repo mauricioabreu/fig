@@ -1,12 +1,17 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
-from .packages.docker.errors import APIError
+
+from collections import namedtuple
 import logging
-import re
 import os
+import re
 import sys
-from .container import Container
-from .progress_stream import stream_output, StreamOutputError
+
+from fig.packages.docker.errors import APIError
+
+from fig.container import Container
+from fig.progress_stream import stream_output, StreamOutputError
+
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +42,9 @@ class CannotBeScaledError(Exception):
 
 class ConfigError(ValueError):
     pass
+
+
+ServiceLink = namedtuple('ServiceLink', 'service alias')
 
 
 class Service(object):
@@ -268,11 +276,10 @@ class Service(object):
             return [self.start_container_if_stopped(c) for c in containers]
 
     def get_linked_names(self):
-        return [s.full_name for (s, _) in self.links]
+        return [link.service.full_name for link in self.links]
 
-    # TODO: namedtuple for links
     def get_linked_services(self):
-        return [s for (s, _) in self.links]
+        return [link.service for link in self.links]
 
     def next_container_name(self, one_off=False):
         bits = [self.project, self.name]

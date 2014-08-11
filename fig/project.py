@@ -5,12 +5,13 @@ import logging
 from operator import attrgetter
 
 import requests
-from .packages import six
+from fig.packages import six
+from fig.packages.docker.errors import APIError
 import yaml
 
-from .service import Service
-from .container import Container
-from .packages.docker.errors import APIError
+from fig.service import Service
+from fig.service import ServiceLink
+from fig.container import Container
 
 log = logging.getLogger(__name__)
 
@@ -117,7 +118,6 @@ class Project(object):
     def from_config(cls, name, config, client):
         dicts = []
         external_projects = get_external_projects(name, config, client)
-        print "%s has externals %s" % (name, external_projects)
         for service_name, service in config.items():
             if not isinstance(service, dict):
                 raise ConfigurationError(
@@ -133,17 +133,21 @@ class Project(object):
         Retrieve a service by name. Raises NoSuchService
         if the named service does not exist.
         """
-        for service in self.services:
-            if service.name == name:
-                return service
+        if '_' in name:
+            project_name, name = name.rsplit('_', 1)
+        else:
+            project_name = self.name
+
+        if project_name == self.name:
+            for service in self.services:
+                if service.name == name:
+                    return service
 
         # TODO: move into external_projects module
         # TODO: test case
-        if '_' in name:
-            project_name, name = name.rsplit('_', 1)
-            for project in self.external_projects:
-                if project.name == project_name:
-                    return project.get_service(name)
+        for project in self.external_projects:
+            if project.name == project_name:
+                return project.get_service(name)
 
         raise NoSuchService(name)
 
@@ -196,7 +200,7 @@ class Project(object):
                 service_name, link_name = link, None
 
             try:
-                return self.get_service(service_name), link_name
+                return ServiceLink(self.get_service(service_name), link_name)
             except NoSuchService:
                 raise ConfigurationError(
                     'Service "%s" has a link to service "%s" which does not '

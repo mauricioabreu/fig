@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 from .. import unittest
 from fig.service import Service
+from fig.service import ServiceLink
 from fig.project import Project, ConfigurationError
 
 
@@ -105,7 +106,7 @@ class ProjectTest(unittest.TestCase):
         web = Service(
             project='figtest',
             name='web',
-            links=[(db, 'database')]
+            links=[ServiceLink(db, 'database')]
         )
         cache = Service(
             project='figtest',
@@ -114,7 +115,7 @@ class ProjectTest(unittest.TestCase):
         console = Service(
             project='figtest',
             name='console',
-            links=[(web, 'web')]
+            links=[ServiceLink(web, 'web')]
         )
         project = Project('test', [web, db, cache, console], None)
         services = project.get_services(['console'], include_links=True)
@@ -128,7 +129,7 @@ class ProjectTest(unittest.TestCase):
         web = Service(
             project='figtest',
             name='web',
-            links=[(db, 'database')]
+            links=[ServiceLink(db, 'database')]
         )
         project = Project('test', [web, db], None)
         self.assertEqual(
@@ -147,9 +148,9 @@ class ProjectTest(unittest.TestCase):
         ]
         links = project.get_links(config_links, 'test')
         expected = [
-            (db, None),
-            (db, 'alias'),
-            (other, None),
+            ServiceLink(db, None),
+            ServiceLink(db, 'alias'),
+            ServiceLink(other, None),
         ]
         self.assertEqual(links, expected)
 
