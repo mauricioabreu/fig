@@ -2,11 +2,12 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from collections import namedtuple
 import logging
-import re
 import os
 from operator import attrgetter
+import re
 import sys
 
+import six
 from docker.errors import APIError
 
 from .container import Container
@@ -369,7 +370,9 @@ class Service(object):
         if 'environment' in container_options:
             if isinstance(container_options['environment'], list):
                 container_options['environment'] = dict(split_env(e) for e in container_options['environment'])
-            container_options['environment'] = dict(resolve_env(k, v) for k, v in container_options['environment'].iteritems())
+            container_options['environment'] = dict(
+                resolve_env(k, v)
+                for k, v in six.iteritems(container_options['environment']))
 
         if self.can_be_built():
             if len(self.client.images(name=self._build_tag_name())) == 0:
@@ -396,8 +399,8 @@ class Service(object):
 
         try:
             all_events = stream_output(build_output, sys.stdout)
-        except StreamOutputError, e:
-            raise BuildError(self, unicode(e))
+        except StreamOutputError as e:
+            raise BuildError(self, six.text_type(e))
 
         image_id = None
 

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import sys
 
 from six import StringIO
-from mock import patch
+from .. import mock
 
 from .testcases import DockerClientTestCase
 from fig.cli.main import TopLevelCommand
@@ -25,13 +25,13 @@ class CLITestCase(DockerClientTestCase):
     def project(self):
         return self.command.get_project(self.command.get_config_path())
 
-    @patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('sys.stdout', new_callable=StringIO)
     def test_ps(self, mock_stdout):
         self.project.get_service('simple').create_container()
         self.command.dispatch(['ps'], None)
         self.assertIn('simplefigfile_simple_1', mock_stdout.getvalue())
 
-    @patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('sys.stdout', new_callable=StringIO)
     def test_ps_default_figfile(self, mock_stdout):
         self.command.base_dir = 'tests/fixtures/multiple-figfiles'
         self.command.dispatch(['up', '-d'], None)
@@ -42,7 +42,7 @@ class CLITestCase(DockerClientTestCase):
         self.assertIn('multiplefigfiles_another_1', output)
         self.assertNotIn('multiplefigfiles_yetanother_1', output)
 
-    @patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('sys.stdout', new_callable=StringIO)
     def test_ps_alternate_figfile(self, mock_stdout):
         self.command.base_dir = 'tests/fixtures/multiple-figfiles'
         self.command.dispatch(['-f', 'fig2.yml', 'up', '-d'], None)
@@ -53,13 +53,13 @@ class CLITestCase(DockerClientTestCase):
         self.assertNotIn('multiplefigfiles_another_1', output)
         self.assertIn('multiplefigfiles_yetanother_1', output)
 
-    @patch('fig.service.log')
+    @mock.patch('fig.service.log')
     def test_pull(self, mock_logging):
         self.command.dispatch(['pull'], None)
         mock_logging.info.assert_any_call('Pulling simple (busybox:latest)...')
         mock_logging.info.assert_any_call('Pulling another (busybox:latest)...')
 
-    @patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('sys.stdout', new_callable=StringIO)
     def test_build_no_cache(self, mock_stdout):
         self.command.base_dir = 'tests/fixtures/simple-dockerfile'
         self.command.dispatch(['build', 'simple'], None)
@@ -129,13 +129,13 @@ class CLITestCase(DockerClientTestCase):
 
         self.assertEqual(old_ids, new_ids)
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_service_without_links(self, mock_stdout):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['run', 'console', '/bin/true'], None)
         self.assertEqual(len(self.project.containers()), 0)
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_service_with_links(self, __):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['run', 'web', '/bin/true'], None)
@@ -144,14 +144,14 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(len(db.containers()), 1)
         self.assertEqual(len(console.containers()), 0)
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_with_no_deps(self, __):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['run', '--no-deps', 'web', '/bin/true'], None)
         db = self.project.get_service('db')
         self.assertEqual(len(db.containers()), 0)
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_does_not_recreate_linked_containers(self, __):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['up', '-d', 'db'], None)
@@ -167,7 +167,7 @@ class CLITestCase(DockerClientTestCase):
 
         self.assertEqual(old_ids, new_ids)
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_without_command(self, __):
         self.command.base_dir = 'tests/fixtures/commands-figfile'
         self.check_build('tests/fixtures/simple-dockerfile', tag='figtest_test')
@@ -191,7 +191,7 @@ class CLITestCase(DockerClientTestCase):
             [u'/bin/true'],
         )
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_service_with_entrypoint_overridden(self, _):
         self.command.base_dir = 'tests/fixtures/dockerfile_with_entrypoint'
         name = 'service'
@@ -206,7 +206,7 @@ class CLITestCase(DockerClientTestCase):
             u'/bin/echo helloworld'
         )
 
-    @patch('fig.packages.dockerpty.start')
+    @mock.patch('fig.packages.dockerpty.start')
     def test_run_service_with_environement_overridden(self, _):
         name = 'service'
         self.command.base_dir = 'tests/fixtures/environment-figfile'
@@ -277,7 +277,7 @@ class CLITestCase(DockerClientTestCase):
         self.command.dispatch(['up', '-d'], None)
         container = self.project.get_service('simple').get_container()
 
-        @patch('sys.stdout', new_callable=StringIO)
+        @mock.patch('sys.stdout', new_callable=StringIO)
         def get_port(number, mock_stdout):
             self.command.dispatch(['port', 'simple', str(number)], None)
             return mock_stdout.getvalue().rstrip()

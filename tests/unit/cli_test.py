@@ -3,8 +3,7 @@ from __future__ import absolute_import
 import logging
 import os
 from .. import unittest
-
-import mock
+from .. import mock
 
 from fig.cli import main
 from fig.cli.main import TopLevelCommand
