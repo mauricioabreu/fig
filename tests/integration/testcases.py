@@ -1,5 +1,8 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
+
+import six
+
 from fig.service import Service
 from fig.cli.docker_client import docker_client
 from fig.progress_stream import stream_output
@@ -17,7 +20,7 @@ class DockerClientTestCase(unittest.TestCase):
                 self.client.kill(c['Id'])
                 self.client.remove_container(c['Id'])
         for i in self.client.images():
-            if isinstance(i.get('Tag'), basestring) and 'figtest' in i['Tag']:
+            if isinstance(i.get('Tag'), six.string_types) and 'figtest' in i['Tag']:
                 self.client.remove_image(i)
 
     def create_service(self, name, **kwargs):

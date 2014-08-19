@@ -2,6 +2,8 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 import os
 
+import six
+
 from fig import Service
 from fig.service import CannotBeScaledError
 from fig.container import Container
@@ -243,7 +245,7 @@ class ServiceTest(DockerClientTestCase):
         )
         container = service.start_container()
         container.wait()
-        self.assertIn('success', container.logs())
+        self.assertIn(b'success', container.logs())
         self.assertEqual(len(self.client.images(name='figtest_test')), 1)
 
     def test_start_container_uses_tagged_image_if_it_exists(self):
@@ -256,7 +258,7 @@ class ServiceTest(DockerClientTestCase):
         )
         container = service.start_container()
         container.wait()
-        self.assertIn('success', container.logs())
+        self.assertIn(b'success', container.logs())
 
     def test_start_container_creates_ports(self):
         service = self.create_service('web', ports=[8000])
@@ -373,7 +375,11 @@ class ServiceTest(DockerClientTestCase):
     def test_split_env(self):
         service = self.create_service('web', environment=['NORMAL=F1', 'CONTAINS_EQUALS=F=2', 'TRAILING_EQUALS='])
         env = service.start_container().environment
-        for k,v in {'NORMAL': 'F1', 'CONTAINS_EQUALS': 'F=2', 'TRAILING_EQUALS': ''}.iteritems():
+        for k,v in six.iteritems({
+            'NORMAL': 'F1',
+            'CONTAINS_EQUALS': 'F=2',
+            'TRAILING_EQUALS': ''
+        }):
             self.assertEqual(env[k], v)
 
     def test_resolve_env(self):
@@ -383,7 +389,12 @@ class ServiceTest(DockerClientTestCase):
         os.environ['ENV_DEF'] = 'E3'
         try:
             env = service.start_container().environment
-            for k,v in {'FILE_DEF': 'F1', 'FILE_DEF_EMPTY': '', 'ENV_DEF': 'E3', 'NO_DEF': ''}.iteritems():
+            for k,v in six.iteritems({
+                'FILE_DEF': 'F1',
+                'FILE_DEF_EMPTY': '',
+                'ENV_DEF': 'E3',
+                'NO_DEF': ''
+            }):
                 self.assertEqual(env[k], v)
         finally:
             del os.environ['FILE_DEF']
