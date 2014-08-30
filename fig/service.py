@@ -67,7 +67,10 @@ class Service(object):
         if 'image' in options and 'build' in options:
             raise ConfigError('Service %s has both an image and build path specified. A service can either be built to image or use an existing image, not both.' % name)
 
-        supported_options = DOCKER_CONFIG_KEYS + ['build', 'expose']
+        if 'tags' in options and not isinstance(options['tags'], list):
+            raise ConfigError("Service %s tags must be a list." % name)
+
+        supported_options = DOCKER_CONFIG_KEYS + ['build', 'expose', 'tags']
 
         for k in options:
             if k not in supported_options:
@@ -410,9 +413,18 @@ class Service(object):
                     image_id = match.group(1)
 
         if image_id is None:
-            raise BuildError(self)
+            raise BuildError(self, event if all_events else 'Unknown')
 
+        self.tag_image(image_id)
         return image_id
+
+    def tag_image(self, image_id):
+        for tag in self.options.get('tags', []):
+            if ':' in tag:
+                image_name, image_tag = tag.rsplit(':', 1)
+            else:
+                image_name, image_tag = tag, None
+            self.client.tag(image_id, image_name, tag=image_tag)
 
     def can_be_built(self):
         return 'build' in self.options
