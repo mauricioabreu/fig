@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-from fig.packages import six
+import six
 
 
 class Container(object):
@@ -66,7 +66,7 @@ class Container(object):
 
     @property
     def ports(self):
-        return self.get('NetworkSettings.Ports')
+        return self.get('NetworkSettings.Ports') or {}
 
     @property
     def human_readable_ports(self):
