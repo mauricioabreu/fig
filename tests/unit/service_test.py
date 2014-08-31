@@ -1,15 +1,20 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
+import mock
 from .. import unittest
 
+import docker
 import mock
-from fig.packages import docker
 
 from fig import Service
 from fig.service import ConfigError, split_port
 
 
 class ServiceTest(unittest.TestCase):
+
+    def setUp(self):
+        self.mock_client = mock.create_autospec(docker.Client)
+
     def test_name_validations(self):
         self.assertRaises(ConfigError, lambda: Service(name=''))
 
@@ -51,29 +56,27 @@ class ServiceTest(unittest.TestCase):
         self.assertEqual(external_port, "1000")
 
     def test_split_domainname_none(self):
-        service = Service('foo',
-                hostname = 'name',
-            )
-        service.next_container_name = lambda x: 'foo'
+        service = Service('foo', hostname='name', client=self.mock_client)
+        self.mock_client.containers.return_value = []
         opts = service._get_container_create_options({})
         self.assertEqual(opts['hostname'], 'name', 'hostname')
         self.assertFalse('domainname' in opts, 'domainname')
 
     def test_split_domainname_fqdn(self):
         service = Service('foo',
-                hostname = 'name.domain.tld',
-            )
-        service.next_container_name = lambda x: 'foo'
+                hostname='name.domain.tld',
+                client=self.mock_client)
+        self.mock_client.containers.return_value = []
         opts = service._get_container_create_options({})
         self.assertEqual(opts['hostname'], 'name', 'hostname')
         self.assertEqual(opts['domainname'], 'domain.tld', 'domainname')
 
     def test_split_domainname_both(self):
         service = Service('foo',
-                hostname = 'name',
-                domainname = 'domain.tld',
-            )
-        service.next_container_name = lambda x: 'foo'
+                hostname='name',
+                domainname='domain.tld',
+                client=self.mock_client)
+        self.mock_client.containers.return_value = []
         opts = service._get_container_create_options({})
         self.assertEqual(opts['hostname'], 'name', 'hostname')
         self.assertEqual(opts['domainname'], 'domain.tld', 'domainname')
@@ -82,8 +85,8 @@ class ServiceTest(unittest.TestCase):
         service = Service('foo',
                 hostname='name.sub',
                 domainname='domain.tld',
-            )
-        service.next_container_name = lambda x: 'foo'
+                client=self.mock_client)
+        self.mock_client.containers.return_value = []
         opts = service._get_container_create_options({})
         self.assertEqual(opts['hostname'], 'name.sub', 'hostname')
         self.assertEqual(opts['domainname'], 'domain.tld', 'domainname')
