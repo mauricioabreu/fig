@@ -437,10 +437,7 @@ class Service(object):
 
     def tag_image(self, image_id):
         for tag in self.options.get('tags', []):
-            if ':' in tag:
-                image_name, image_tag = tag.rsplit(':', 1)
-            else:
-                image_name, image_tag = tag, None
+            image_name, image_tag = split_tag(tag)
             self.client.tag(image_id, image_name, tag=image_tag)
 
     def can_be_built(self):
@@ -451,6 +448,13 @@ class Service(object):
             if ':' in str(port):
                 return False
         return True
+
+
+def split_tag(tag):
+    if ':' in tag:
+        return tag.rsplit(':', 1)
+    else:
+        return tag, None
 
 
 NAME_RE = re.compile(r'^([^_]+)_([^_]+)_(run_)?(\d+)$')

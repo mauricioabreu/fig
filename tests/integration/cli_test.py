@@ -6,6 +6,7 @@ from six import StringIO
 
 from .testcases import DockerClientTestCase
 from fig.cli.main import TopLevelCommand
+from fig.service import split_tag
 
 
 class CLITestCase(DockerClientTestCase):
@@ -77,7 +78,8 @@ class CLITestCase(DockerClientTestCase):
         try:
             self.command.dispatch(['build', 'simple'], None)
             for tag in tags:
-                self.assertTrue(self.client.images(tag))
+                tag_name, _ = split_tag(tag)
+                self.assertTrue(self.client.images(tag_name))
         finally:
             for tag in tags:
                 self.client.remove_image(tag, force=True)
