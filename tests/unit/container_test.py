@@ -85,3 +85,15 @@ class ContainerTest(unittest.TestCase):
 
         container.inspect_if_not_inspected()
         self.assertEqual(mock_client.inspect_container.call_count, 1)
+
+    def test_get(self):
+        container = Container(None, {
+            "Status":"Up 8 seconds",
+            "HostConfig": {
+                "VolumesFrom": ["volume_id",]
+            },
+        }, has_been_inspected=True)
+
+        self.assertEqual(container.get('Status'), "Up 8 seconds")
+        self.assertEqual(container.get('HostConfig.VolumesFrom'), ["volume_id",])
+        self.assertEqual(container.get('Foo.Bar.DoesNotExist'), None)

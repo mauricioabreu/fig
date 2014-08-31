@@ -64,46 +64,49 @@ class Container(object):
 
     @property
     def human_readable_ports(self):
-        self.inspect_if_not_inspected()
-        if not self.dictionary['NetworkSettings']['Ports']:
+        ports = self.get('NetworkSettings.Ports')
+        if not ports:
             return ''
-        ports = []
-        for private, public in list(self.dictionary['NetworkSettings']['Ports'].items()):
+
+        out = []
+        for private, public in ports.items():
             if public:
-                ports.append('%s->%s' % (public[0]['HostPort'], private))
+                out.append('%s->%s' % (public[0]['HostPort'], private))
             else:
-                ports.append(private)
-        return ', '.join(ports)
+                out.append(private)
+        return ', '.join(out)
 
     @property
     def human_readable_state(self):
-        self.inspect_if_not_inspected()
-        if self.dictionary['State']['Running']:
-            if self.dictionary['State'].get('Ghost'):
-                return 'Ghost'
-            else:
-                return 'Up'
+        if self.is_running:
+            return 'Ghost' if self.get('State.Ghost') else 'Up'
         else:
-            return 'Exit %s' % self.dictionary['State']['ExitCode']
+            return 'Exit %s' % self.get('State.ExitCode')
 
     @property
     def human_readable_command(self):
-        self.inspect_if_not_inspected()
-        if self.dictionary['Config']['Cmd']:
-            return ' '.join(self.dictionary['Config']['Cmd'])
-        else:
-            return ''
+        return ' '.join(self.get('Config.Cmd') or '')
 
     @property
     def environment(self):
-        self.inspect_if_not_inspected()
-        return dict(var.split("=", 1)
-                    for var in self.dictionary.get('Config', {}).get('Env', []))
+        return dict(var.split("=", 1) for var in self.get('Config.Env') or [])
 
     @property
     def is_running(self):
+        return self.get('State.Running')
+
+    def get(self, key):
+        """Return a value from the container or None if the value is not set.
+
+        :param key: a string using dotted notation for nested dictionary
+                    lookups
+        """
         self.inspect_if_not_inspected()
-        return self.dictionary['State']['Running']
+
+        def get_value(dictionary, key):
+            return (dictionary or {}).get(key)
+
+        return reduce(get_value, key.split('.'), self.dictionary)
 
     def start(self, **options):
         return self.client.start(self.id, **options)
