@@ -4,13 +4,14 @@ from itertools import chain
 import logging
 from operator import attrgetter
 
-from fig.packages import six
-from fig.packages.docker.errors import APIError
+from docker.errors import APIError
+import six
 
 from fig import includes
 from fig.service import Service
 from fig.service import ServiceLink
 from fig.container import Container
+
 
 log = logging.getLogger(__name__)
 
@@ -213,6 +214,10 @@ class Project(object):
         for service in reversed(self.get_services(service_names)):
             service.kill(**options)
 
+    def restart(self, service_names=None, **options):
+        for service in self.get_services(service_names):
+            service.restart(**options)
+
     def build(self, service_names=None, no_cache=False):
         for service in self.get_services(service_names):
             if service.can_be_built():
@@ -233,6 +238,10 @@ class Project(object):
 
         return running_containers
 
+    def pull(self, service_names=None):
+        for service in self.get_services(service_names, include_links=True):
+            service.pull()
+
     def remove_stopped(self, service_names=None, **options):
         for service in self.get_services(service_names):
             service.remove_stopped(**options)
@@ -248,6 +257,17 @@ class Project(object):
             self.name,
             len(self.services),
             len(self.external_projects))
+
+    def _inject_links(self, acc, service):
+        linked_names = service.get_linked_names()
+
+        if len(linked_names) > 0:
+            linked_services = self.get_services(
+                service_names=linked_names,
+                include_links=True
+            )
+        else:
+            linked_services = []
 
 
 def flat_map(func, seq):

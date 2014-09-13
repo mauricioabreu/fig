@@ -3,9 +3,10 @@
 from __future__ import unicode_literals
 from __future__ import absolute_import
 from setuptools import setup, find_packages
-import re
-import os
 import codecs
+import os
+import re
+import sys
 
 
 def read(*parts):
@@ -30,11 +31,21 @@ install_requires = [
     'texttable >= 0.8.1, < 0.9',
     'websocket-client >= 0.11.0, < 0.12',
     'dockerpty >= 0.2.3, < 0.3',
+    'docker-py >= 0.3.2, < 0.6',
+    'six >= 1.3.0, < 2',
+]
+
+tests_require = [
+    'mock >= 1.0.1',
+    'nose',
+    'pyinstaller',
+    'flake8',
 ]
 
 
-with open('requirements-dev.txt') as f:
-    tests_require = f.read().splitlines()
+if sys.version_info < (2, 7):
+    tests_require.append('unittest2')
+
 
 setup(
     name='fig',
@@ -43,7 +54,7 @@ setup(
     url='http://www.fig.sh/',
     author='Docker, Inc.',
     license='Apache License 2.0',
-    packages=find_packages(),
+    packages=find_packages(exclude=[ 'tests.*', 'tests' ]),
     include_package_data=True,
     test_suite='nose.collector',
     install_requires=install_requires,
