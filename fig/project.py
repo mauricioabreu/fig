@@ -95,17 +95,20 @@ class Project(object):
 
     @classmethod
     def from_config(cls, name, config, client):
-        dicts = []
-        external_projects = get_external_projects(name, config, client)
+        services = []
+        project_config = config.pop('project-config', {})
+        external_projects = get_external_projects(name, project_config, client)
+        name = project_config.get('name', name)
+
         for service_name, service in config.items():
             if not isinstance(service, dict):
                 raise ConfigurationError(
-                    'Service "%s" doesn\'t have any configuration options. All '
-                    'top level keys in your fig.yml must map to a dictionary '
-                    'of configuration options.')
+                    'Service "%s" doesn\'t have any configuration options. '
+                    'All top level keys in your fig.yml must map to a '
+                    'dictionary of configuration options.')
             service['name'] = service_name
-            dicts.append(service)
-        return cls.from_dicts(name, dicts, client, external_projects)
+            services.append(service)
+        return cls.from_dicts(name, services, client, external_projects)
 
     def get_service(self, name):
         """

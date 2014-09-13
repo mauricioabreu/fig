@@ -67,6 +67,15 @@ class ProjectTest(unittest.TestCase):
                 'web': 'busybox:latest',
             }, None)
 
+    def test_from_config_with_project_config(self):
+        project_name = 'theprojectnamefromconfig'
+        project = Project.from_config('default_name_not_used', {
+            'project-config': {'name': project_name},
+            'web': {'image': 'busybox:latest'}
+        }, None)
+
+        self.assertEqual(project.name, project_name)
+
     def test_get_service(self):
         web = Service(
             project='figtest',
