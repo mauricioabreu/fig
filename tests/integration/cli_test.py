@@ -105,6 +105,20 @@ class CLITestCase(DockerClientTestCase):
 
     def test_up_with_includes(self):
         self.command.base_dir = 'tests/fixtures/external-includes-figfile'
+
+        self.assertEqual(
+            [s.full_name for s in self.project.get_services()],
+            [
+                'primary_db',
+                'projectb_db',
+                'projectc_configs',
+                'projectc_webapp',
+                'projectb_configs',
+                'projectb_webapp',
+                'projectc_unrelated',
+                'primary_webapp',
+            ])
+
         self.command.dispatch(['up', '-d'], None)
 
         self.assertEqual(
