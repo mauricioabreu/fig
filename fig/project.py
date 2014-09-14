@@ -208,18 +208,19 @@ class Project(object):
 
     def get_volumes_from(self, service_dict):
         volumes_from = []
-        if 'volumes_from' in service_dict:
-            for volume_name in service_dict.get('volumes_from', []):
+        for volume_name in service_dict.pop('volumes_from', []):
+            try:
+                service = self.get_service(volume_name)
+                volumes_from.append(service)
+            except NoSuchService:
                 try:
-                    service = self.get_service(volume_name)
-                    volumes_from.append(service)
-                except NoSuchService:
-                    try:
-                        container = Container.from_id(self.client, volume_name)
-                        volumes_from.append(container)
-                    except APIError:
-                        raise ConfigurationError('Service "%s" mounts volumes from "%s", which is not the name of a service or container.' % (service_dict['name'], volume_name))
-            del service_dict['volumes_from']
+                    container = Container.from_id(self.client, volume_name)
+                    volumes_from.append(container)
+                except APIError:
+                    raise ConfigurationError(
+                        'Service "%s" mounts volumes from "%s", which is not '
+                        'the name of a service or container.' % (
+                        service_dict['name'], volume_name))
         return volumes_from
 
     def start(self, service_names=None, **options):

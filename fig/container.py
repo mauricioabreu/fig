@@ -144,6 +144,7 @@ class Container(object):
         self.has_been_inspected = True
         return self.dictionary
 
+    # TODO: should this be using dictionary['HostCofig']['Links'] ?
     def links(self):
         links = []
         for container in self.client.containers():

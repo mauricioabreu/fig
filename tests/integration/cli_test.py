@@ -105,17 +105,42 @@ class CLITestCase(DockerClientTestCase):
 
     def test_up_with_includes(self):
         self.command.base_dir = 'tests/fixtures/external-includes-figfile'
-        self.command.dispatch(['up', '-d', 'webapp'], None)
-        
-        webapp = self.project.get_service('webapp')
-        expected = [
-            'externalincludesfigfile_db',
-            'serviceb_webapp',
-            'servicec_webapp'
-        ]
+        self.command.dispatch(['up', '-d'], None)
+
         self.assertEqual(
-            [link.service.full_name for link in webapp.links],
-            expected)
+            set(c.name for c in self.project.containers(stopped=True)),
+            set([
+                'primary_db_1',
+                'primary_webapp_1',
+                'projectb_configs_1',
+                'projectb_db_1',
+                'projectb_webapp_1',
+                'projectc_configs_1',
+                'projectc_unrelated_1',
+                'projectc_webapp_1',
+            ]))
+
+        assert_has_links_and_volumes(
+            self.project,
+            'webapp',
+            set([
+                'primary_db_1',
+                'projectb_webapp_1',
+                'projectc_webapp_1',
+            ]))
+
+        assert_has_links_and_volumes(
+            self.project,
+            'projectb_webapp',
+            set(['projectb_db_1', 'projectc_webapp_1']),
+            ['projectb_configs'])
+
+        assert_has_links_and_volumes(
+            self.project,
+            'projectc_webapp',
+            expected_volumes=['projectc_configs'])
+
+        # TODO: assert each webapp has the correct volumes
 
     def test_up_with_recreate(self):
         self.command.dispatch(['up', '-d'], None)
@@ -266,3 +291,21 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(get_port(3000), container.get_local_port(3000))
         self.assertEqual(get_port(3001), "0.0.0.0:9999")
         self.assertEqual(get_port(3002), "")
+
+
+def assert_has_links_and_volumes(
+        project,
+        service_name,
+        expected_links=None,
+        expected_volumes=None):
+
+    container = project.get_service(service_name).get_container()
+
+    if expected_links is not None:
+        assert expected_links.issubset(set(container.links()))
+
+    # TODO: use container.get()
+    if expected_volumes is not None:
+        import ipdb; ipdb.set_trace()
+        #assert expected_volumes == container.dictionary['HostConfig']['VolumesFrom']
+        pass

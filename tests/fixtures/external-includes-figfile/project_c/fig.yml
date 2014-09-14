@@ -2,7 +2,7 @@
 configs:
   image: busybox:latest
   volumes:
-    - /opt/configs
+    - /home
 
 webapp:
   image: busybox:latest
