@@ -8,8 +8,10 @@ from docker.errors import APIError
 import six
 
 from fig import includes
-from fig.service import Service
-from fig.service import ServiceLink
+from fig.service import (
+    Service,
+    ServiceLink,
+)
 from fig.container import Container
 
 
@@ -47,21 +49,32 @@ def sort_service_dicts(services):
     return sorted_services
 
 
-# TODO: this should be a unique set by project location
-def get_external_projects(name, config, client):
+def get_external_projects(name, project_config, client, project_cache):
     """Recursively fetch included projects.
+
+    Cache each external project by url. If a project is encountered with the
+    same url the same instance of :class:`Project` will be returned.
     """
+    project_cache = project_cache if project_cache is not None else {}
 
-    def get_project(name, fetch_request):
-        config = includes.fetch_external_config(fetch_request)
+    def build_project(name, config):
         # TODO: verify each service is available as an image
-        return Project.from_config(name, config, client)
+        return Project.from_config(name, config, client, project_cache)
 
-    # TODO: verify project uniqueness by name instead of having
-    # duplicate projects
-    conf_includes = config.pop('include', {})
-    return [get_project(external_name, fetch_request)
-            for external_name, fetch_request in six.iteritems(conf_includes)]
+    def get_project(name, project_include):
+        if 'url' not in project_include:
+            raise ConfigurationError("Include %s is missing a url" % name)
+
+        url = includes.normalize_url(project_include['url'])
+
+        if url not in project_cache:
+            config = includes.fetch_external_config(url, project_include)
+            project_cache[url] = build_project(name, config)
+
+        return project_cache[url]
+
+    conf_includes = project_config.pop('include', {})
+    return [get_project(*item) for item in six.iteritems(conf_includes)]
 
 
 class Project(object):
@@ -94,10 +107,14 @@ class Project(object):
         return project
 
     @classmethod
-    def from_config(cls, name, config, client):
+    def from_config(cls, name, config, client, project_cache=None):
         services = []
         project_config = config.pop('project-config', {})
-        external_projects = get_external_projects(name, project_config, client)
+        external_projects = get_external_projects(
+            name,
+            project_config,
+            client,
+            project_cache)
         name = project_config.get('name', name)
 
         for service_name, service in config.items():

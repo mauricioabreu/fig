@@ -1,8 +1,18 @@
 from __future__ import unicode_literals
+
+import mock
 from .. import unittest
-from fig.service import Service
-from fig.service import ServiceLink
-from fig.project import Project, ConfigurationError
+
+from fig.includes import normalize_url
+from fig.service import (
+    Service,
+    ServiceLink,
+ )
+from fig.project import (
+    ConfigurationError,
+    Project,
+    get_external_projects,
+)
 
 
 class ProjectTest(unittest.TestCase):
@@ -167,3 +177,78 @@ class ProjectTest(unittest.TestCase):
         project = Project('test', [], None)
         self.assertEqual(project.get_links(None, None), [])
 
+
+class GetExternalProjectsTest(unittest.TestCase):
+
+    includes = {
+        'project_a': {
+            'include': {
+                'project_b': {
+                    'url': 'http://example.com/project_b/fig.yml'
+                },
+                 'project_c': {
+                    'url': 'http://example.com/project_c/fig.yml'
+                },
+            },
+        },
+        'project_b': {
+            'include': {
+                'project_c': {
+                    'url': 'http://example.com/project_c/fig.yml'
+                },
+            },
+        },
+    }
+
+    def test_get_external_projects_none(self):
+        self.assertEqual(get_external_projects('foo', {}, None, None), [])
+
+    def test_get_external_projects_invalid_config(self):
+        with self.assertRaises(ConfigurationError) as exc:
+            get_external_projects(
+                'foo',
+                {'include': {'something': {}}},
+                None,
+                None)
+        self.assertIn("something is missing a url", str(exc.exception))
+
+    @mock.patch('fig.project.includes.fetch_external_config', autospec=True)
+    def test_get_external_projects_no_duplicates(self, mock_fetch):
+        mock_fetch.return_value = {'project-config': {'name': 'project_c'}}
+        mock_client = mock.Mock()
+
+        projects = get_external_projects(
+            'foo',
+            dict(self.includes['project_b']),
+            mock_client,
+            None)
+
+        self.assertEqual(len(projects), 1)
+        self.assertEqual(projects[0].name, 'project_c')
+        self.assertEqual(projects[0].client, mock_client)
+
+    @mock.patch('fig.project.includes.fetch_external_config', autospec=True)
+    def test_get_external_projects_with_cached(self, mock_fetch):
+        mock_fetch.return_value = {
+            'project-config': {
+                'name': 'project_b',
+                'includes': dict(self.includes['project_b']),
+            }
+        }
+
+        mock_client = mock.Mock()
+        mock_project_c = mock.Mock()
+        project_cache = {
+            normalize_url('http://example.com/project_c/fig.yml'): mock_project_c
+        }
+
+        projects = get_external_projects(
+            'foo',
+            dict(self.includes['project_a']),
+            mock_client,
+            project_cache)
+
+        self.assertEqual(len(projects), 2)
+        self.assertEqual(projects[0], mock_project_c)
+        self.assertEqual(projects[1].name, 'project_b')
+        self.assertEqual(projects[1].client, mock_client)

@@ -1,34 +1,50 @@
 """Include external projects, allowing services to link to a service
-defined in an external `fig.yml` file.
+defined in an external project.
 """
 import logging
 
-from fig.packages import six
 import requests
+import six
+from six.moves.urllib.parse import urlparse
 import yaml
+from fig.service import ConfigError
 
 
 log = logging.getLogger(__name__)
 
 
-# TODO: test case for different types
-def fetch_external_config(fetch_request):
-    # TODO: format fetch_request
-    log.info("Fetching config from %s" % (fetch_request,))
+def normalize_url(url):
+    url = urlparse(url)
+    return url if url.scheme else url._replace(scheme='file')
 
-    def read_config(content):
-        return yaml.safe_load(content)
 
-    if 'url' in fetch_request:
-        # TODO: error handling of failed requersts
-        # TODO: parse username, or does requests handle that?
-        return read_config(requests.get(fetch_request['url']).text)
+def read_config(content):
+    return yaml.safe_load(content)
 
-    if 'path' in fetch_request:
-        # TODO: error handling
-        with open(fetch_request['path'], 'r') as fh:
-            return read_config(fh.read())
+
+def get_project_from_file(url):
+    # Handle urls in the form file://./some/relative/path
+    path = url.netloc + url.path if url.netloc.startswith('.') else url.path
+    with open(path, 'r') as fh:
+        return read_config(fh.read())
+
+
+# TODO: caching for remote options
+def get_project_from_http(url, config):
+    # TODO: error handling of failed requersts
+    # TODO: parse username, or does requests handle that?
+    return read_config(requests.get(url).text)
+
+
+def fetch_external_config(url, include_config):
+    log.info("Fetching config from %s" % url.geturl())
+
+    if url.scheme in ('http', 'https'):
+        return get_project_from_http(url, include_config)
+
+    if url.scheme == 'file':
+        return get_project_from_file(url)
 
     # TODO: git?
-    # TODO: raise config error as fallback
-
+    raise ConfigError("Unsupported url scheme \"%s\" for %s." % (
+        url.scheme, url))
