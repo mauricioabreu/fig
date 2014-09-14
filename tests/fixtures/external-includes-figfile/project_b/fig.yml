@@ -1,22 +1,23 @@
 
 project-config:
-  name: primary
-
   include:
-    projectb:
-      url: ./tests/fixtures/external-includes-figfile/project_b/fig.yml
-
-    projectc:
+    proejctc:
       url: ./tests/fixtures/external-includes-figfile/project_c/fig.yml
 
 db:
   image: busybox:latest
   command: /bin/sleep 300
 
+configs:
+  image: busybox:latest
+  volumes:
+    - /opt/configs
+
 webapp:
   image: busybox:latest
   command: /bin/sleep 300
   links:
     - db
-    - projectb_webapp
     - projectc_webapp
+  volumes_from:
+    - configs
