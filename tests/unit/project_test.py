@@ -7,9 +7,10 @@ from fig.includes import normalize_url
 from fig.service import (
     Service,
     ServiceLink,
- )
+)
 from fig.project import (
     ConfigurationError,
+    NoSuchService,
     Project,
     get_external_projects,
 )
@@ -86,7 +87,7 @@ class ProjectTest(unittest.TestCase):
 
         self.assertEqual(project.name, project_name)
 
-    def test_get_service(self):
+    def test_get_service_no_external(self):
         web = Service(
             project='figtest',
             name='web',
@@ -96,6 +97,19 @@ class ProjectTest(unittest.TestCase):
         project = Project('test', [web], None, None)
         self.assertEqual(project.get_service('web'), web)
 
+    def test_get_service_not_found(self):
+        project = Project('test', [], None, None)
+        with self.assertRaises(NoSuchService):
+            project.get_service('not_found')
+
+    def test_get_service_from_external(self):
+        web = Service(project='test', name='web')
+        external_web = Service(project='other', name='web')
+        external_project = Project('other', [external_web], None, None)
+        project = Project('test', [web], None, [external_project])
+
+        self.assertEqual(project.get_service('other_web'), external_web)
+
     def test_get_services_returns_all_services_without_args(self):
         web = Service(project='figtest', name='web')
         console = Service(project='figtest', name='console')
@@ -103,33 +117,21 @@ class ProjectTest(unittest.TestCase):
 
         external_projects = [Project('servicea',[external_web], None, None)]
         project = Project('test', [web, console], None, external_projects)
-        self.assertEqual(project.get_services(), [web, console, external_web])
+        self.assertEqual(project.get_services(), [external_web, web, console])
 
     def test_get_services_returns_listed_services_with_args(self):
-        web = Service(
-            project='figtest',
-            name='web',
-        )
-        console = Service(
-            project='figtest',
-            name='console',
-        )
+        web = Service(project='figtest', name='web')
+        console = Service(project='figtest', name='console')
         project = Project('test', [web, console], None)
         self.assertEqual(project.get_services(['console']), [console])
 
     def test_get_services_with_include_links(self):
-        db = Service(
-            project='figtest',
-            name='db',
-        )
+        db = Service(project='figtest', name='db')
+        cache = Service( project='figtest', name='cache')
         web = Service(
             project='figtest',
             name='web',
             links=[ServiceLink(db, 'database')]
-        )
-        cache = Service(
-            project='figtest',
-            name='cache'
         )
         console = Service(
             project='figtest',
@@ -141,10 +143,7 @@ class ProjectTest(unittest.TestCase):
         self.assertEqual(services, [db, web, console])
 
     def test_get_services_removes_duplicates_following_links(self):
-        db = Service(
-            project='figtest',
-            name='db',
-        )
+        db = Service(project='figtest', name='db')
         web = Service(
             project='figtest',
             name='web',

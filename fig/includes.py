@@ -4,7 +4,6 @@ defined in an external project.
 import logging
 
 import requests
-import six
 from six.moves.urllib.parse import urlparse
 import yaml
 from fig.service import ConfigError

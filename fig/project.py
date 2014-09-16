@@ -128,25 +128,21 @@ class Project(object):
         return cls.from_dicts(name, services, client, external_projects)
 
     def get_service(self, name):
-        """
-        Retrieve a service by name. Raises NoSuchService
-        if the named service does not exist.
-        """
-        # TODO: make this nicer
-        if '_' in name:
-            project_name, name = name.rsplit('_', 1)
-        else:
-            project_name = self.name
+        """Retrieve a service by name.
 
-        if project_name == self.name:
+        :param name: name of the service
+        :returns: :class:`fig.service.Service`
+        :raises NoSuchService: if no service was found by that name
+        """
+        if '_' not in name:
             for service in self.services:
                 if service.name == name:
                     return service
 
-        # TODO: test case
+        project_name, service_name = name.rsplit('_', 1)
         for project in self.external_projects:
             if project.name == project_name:
-                return project.get_service(name)
+                return project.get_service(service_name)
 
         raise NoSuchService(name)
 
@@ -177,12 +173,12 @@ class Project(object):
 
             return flat_map(_add_linked_services, linked_services) + [service]
 
-        if service_names:
-            services = [self.get_service(name) for name in service_names]
-            if include_links:
-                services = flat_map(_add_linked_services, services)
-        else:
-            services = self.all_services
+        if not service_names:
+            return self.all_services
+
+        services = [self.get_service(name) for name in service_names]
+        if include_links:
+            services = flat_map(_add_linked_services, services)
 
         # TODO: use orderedset/ordereddict
         uniques = []
@@ -219,7 +215,7 @@ class Project(object):
                     raise ConfigurationError(
                         'Service "%s" mounts volumes from "%s", which is not '
                         'the name of a service or container.' % (
-                        service_dict['name'], volume_name))
+                            service_dict['name'], volume_name))
         return volumes_from
 
     def start(self, service_names=None, **options):
@@ -277,17 +273,6 @@ class Project(object):
             self.name,
             len(self.services),
             len(self.external_projects))
-
-    def _inject_links(self, acc, service):
-        linked_names = service.get_linked_names()
-
-        if len(linked_names) > 0:
-            linked_services = self.get_services(
-                service_names=linked_names,
-                include_links=True
-            )
-        else:
-            linked_services = []
 
 
 def flat_map(func, seq):
