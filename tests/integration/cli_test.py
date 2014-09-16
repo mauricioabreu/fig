@@ -109,13 +109,13 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(
             [s.full_name for s in self.project.get_services()],
             [
-                'primary_db',
-                'projectb_db',
                 'projectc_configs',
                 'projectc_webapp',
-                'projectb_configs',
-                'projectb_webapp',
                 'projectc_unrelated',
+                'projectb_configs',
+                'projectb_db',
+                'projectb_webapp',
+                'primary_db',
                 'primary_webapp',
             ])
 
@@ -147,14 +147,12 @@ class CLITestCase(DockerClientTestCase):
             self.project,
             'projectb_webapp',
             set(['projectb_db_1', 'projectc_webapp_1']),
-            ['projectb_configs'])
+            ['/home'])
 
         assert_has_links_and_volumes(
             self.project,
             'projectc_webapp',
-            expected_volumes=['projectc_configs'])
-
-        # TODO: assert each webapp has the correct volumes
+            expected_volumes=['/home'])
 
     def test_up_with_recreate(self):
         self.command.dispatch(['up', '-d'], None)
@@ -320,6 +318,4 @@ def assert_has_links_and_volumes(
 
     # TODO: use container.get()
     if expected_volumes is not None:
-        import ipdb; ipdb.set_trace()
-        #assert expected_volumes == container.dictionary['HostConfig']['VolumesFrom']
-        pass
+        assert expected_volumes == container.inspect()['VolumesRW'].keys()

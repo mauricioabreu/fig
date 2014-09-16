@@ -152,8 +152,8 @@ class Project(object):
 
     @property
     def all_services(self):
-        return self.services + flat_map(attrgetter('services'),
-                                        self.external_projects)
+        return (flat_map(attrgetter('services'), self.external_projects) +
+                self.services)
 
     def get_services(self, service_names=None, include_links=False):
         """
@@ -179,11 +179,10 @@ class Project(object):
 
         if service_names:
             services = [self.get_service(name) for name in service_names]
+            if include_links:
+                services = flat_map(_add_linked_services, services)
         else:
             services = self.all_services
-
-        if include_links:
-            services = flat_map(_add_linked_services, services)
 
         # TODO: use orderedset/ordereddict
         uniques = []
