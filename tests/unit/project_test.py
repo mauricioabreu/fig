@@ -97,6 +97,11 @@ class ProjectTest(unittest.TestCase):
         project = Project('test', [web], None, None)
         self.assertEqual(project.get_service('web'), web)
 
+    def test_get_service_with_project_name(self):
+        web = Service( project='figtest', name='web')
+        project = Project('test', [web], None, None)
+        self.assertEqual(project.get_service('test_web'), web)
+
     def test_get_service_not_found(self):
         project = Project('test', [], None, None)
         with self.assertRaises(NoSuchService):

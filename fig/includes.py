@@ -28,11 +28,16 @@ def get_project_from_file(url):
         return read_config(fh.read())
 
 
-# TODO: caching for remote options
+# TODO: caching for remote options using requests_cache
 def get_project_from_http(url, config):
-    # TODO: error handling of failed requersts
-    # TODO: parse username, or does requests handle that?
-    return read_config(requests.get(url).text)
+    # TODO: error handling of failed requests
+    response = requests.get(
+        url.geturl(),
+        timeout=config.get('timeout', 20),
+        verify=config.get('verify_ssl_cert', True),
+        cert=config.get('ssl_cert', None),
+        proxies=config.get('proxies', None))
+    return read_config(response.text)
 
 
 def fetch_external_config(url, include_config):

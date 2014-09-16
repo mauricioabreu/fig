@@ -134,12 +134,16 @@ class Project(object):
         :returns: :class:`fig.service.Service`
         :raises NoSuchService: if no service was found by that name
         """
-        if '_' not in name:
+        if '_' in name:
+            project_name, service_name = name.rsplit('_', 1)
+        else:
+            project_name, service_name = self.name, name
+
+        if project_name == self.name:
             for service in self.services:
-                if service.name == name:
+                if service.name == service_name:
                     return service
 
-        project_name, service_name = name.rsplit('_', 1)
         for project in self.external_projects:
             if project.name == project_name:
                 return project.get_service(service_name)
