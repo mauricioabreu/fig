@@ -201,6 +201,23 @@ class ServiceTest(unittest.TestCase):
         mock_log.info.assert_called_once_with(
             'Pulling image someimage:sometag...')
 
+    def test_create_container_with_build(self):
+        self.mock_client.images.return_value = []
+        service = Service('foo', client=self.mock_client, build='.')
+        service.build = mock.create_autospec(service.build)
+        service.create_container(do_build=True)
+
+        self.mock_client.images.assert_called_once_with(name=service.full_name)
+        service.build.assert_called_once_with()
+
+    def test_create_container_no_build(self):
+        self.mock_client.images.return_value = []
+        service = Service('foo', client=self.mock_client, build='.')
+        service.create_container(do_build=False)
+
+        self.assertFalse(self.mock_client.images.called)
+        self.assertFalse(self.mock_client.build.called)
+
 
 class ServiceVolumesTest(unittest.TestCase):
 
