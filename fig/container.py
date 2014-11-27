@@ -112,7 +112,7 @@ class Container(object):
         def get_value(dictionary, key):
             return (dictionary or {}).get(key)
 
-        return reduce(get_value, key.split('.'), self.dictionary)
+        return six.moves.reduce(get_value, key.split('.'), self.dictionary)
 
     def get_local_port(self, port, protocol='tcp'):
         port = self.ports.get("%s/%s" % (port, protocol))

@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import os
 
 from .. import unittest
-import mock
+from .. import mock
 
 import docker
 from requests import Response

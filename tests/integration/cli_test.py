@@ -140,13 +140,13 @@ class CLITestCase(DockerClientTestCase):
 
         self.assertEqual(old_ids, new_ids)
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_service_without_links(self, mock_stdout):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['run', 'console', '/bin/true'], None)
         self.assertEqual(len(self.project.containers()), 0)
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_service_with_links(self, __):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['run', 'web', '/bin/true'], None)
@@ -155,14 +155,14 @@ class CLITestCase(DockerClientTestCase):
         self.assertEqual(len(db.containers()), 1)
         self.assertEqual(len(console.containers()), 0)
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_with_no_deps(self, __):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['run', '--no-deps', 'web', '/bin/true'], None)
         db = self.project.get_service('db')
         self.assertEqual(len(db.containers()), 0)
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_does_not_recreate_linked_containers(self, __):
         self.command.base_dir = 'tests/fixtures/links-figfile'
         self.command.dispatch(['up', '-d', 'db'], None)
@@ -178,7 +178,7 @@ class CLITestCase(DockerClientTestCase):
 
         self.assertEqual(old_ids, new_ids)
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_without_command(self, __):
         self.command.base_dir = 'tests/fixtures/commands-figfile'
         self.check_build('tests/fixtures/simple-dockerfile', tag='figtest_test')
@@ -202,7 +202,7 @@ class CLITestCase(DockerClientTestCase):
             [u'/bin/true'],
         )
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_service_with_entrypoint_overridden(self, _):
         self.command.base_dir = 'tests/fixtures/dockerfile_with_entrypoint'
         name = 'service'
@@ -217,7 +217,7 @@ class CLITestCase(DockerClientTestCase):
             u'/bin/echo helloworld'
         )
 
-    @mock.patch('fig.packages.dockerpty.start')
+    @mock.patch('dockerpty.start')
     def test_run_service_with_environement_overridden(self, _):
         name = 'service'
         self.command.base_dir = 'tests/fixtures/environment-figfile'
