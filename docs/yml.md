@@ -58,6 +58,18 @@ An entry with the alias' name will be created in `/etc/hosts` inside containers 
 
 Environment variables will also be created - see the [environment variable reference](env.html) for details.
 
+### external-links
+
+Links can also point to external references sharing common services.
+`external-links` follow the same semantics of `links` when specifying both the service name and the link alias (`SERVICE:ALIAS`).
+
+```
+external-links:
+ - redis_1
+ - db_project_1:mysql
+ - db_project_1:postgresql
+```
+
 ### ports
 
 Expose ports. Either specify both ports (`HOST:CONTAINER`), or just the container port (a random host port will be chosen).
